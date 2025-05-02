@@ -1,14 +1,13 @@
-# Basis-Image: Ein schlankes Nginx-Image
+# Stage 1: Builder
+FROM node:lts-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+# Stage 2: Laufzeit
 FROM nginx:alpine
-
-# Lösche die Standard-Nginx-Seite (optional)
-RUN rm -rf /usr/share/nginx/html/*
-
-# Kopiere den gebauten Vite-Output in das Verzeichnis, das Nginx bereitstellt
-COPY dist/ /usr/share/nginx/html
-
-# Exponiere den Port 80
-EXPOSE 80
-
-# Starte Nginx im Vordergrund
-CMD ["nginx", "-g", "daemon off;"]
+COPY --from=builder /app/dist /usr/share/nginx/html
+EXPOSE 8081
+HEALTHCHECK --interval=5s --timeout=3s CMD curl -f http://localhost:8081/ || exit 1
